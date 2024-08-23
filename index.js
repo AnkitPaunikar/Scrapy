@@ -1,22 +1,19 @@
+#!/usr/bin/env node
+
 import puppeteer from "puppeteer-core";
-import xlsx from "xlsx";
 import randomUseragent from "random-useragent";
-import { promisify } from "util";
 import pLimit from "p-limit";
+import ExcelJS from "exceljs";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import path from "path";
 import os from "os";
 import fs from "fs";
-import { exec as execCb } from "child_process";
 import gradient from "gradient-string";
 import chalk from "chalk";
 import chalkanimation from "chalk-animation";
 import figlet from "figlet";
 
-const exec = promisify(execCb);
-
-// Parse command line arguments
 const argv = yargs(hideBin(process.argv))
   .option("location", {
     describe: "Location for the job search",
@@ -52,14 +49,10 @@ const argv = yargs(hideBin(process.argv))
 
 const roles = argv.roles;
 const location = argv.location;
-const experience = argv.experience;
 const freshness = argv.freshness;
 const timeLimit = argv.timeout * 60 * 1000;
 const saveDirectory = argv.directory;
 
-console.log(experience);
-
-// Create the save directory if it doesn't exist
 if (!fs.existsSync(saveDirectory)) {
   fs.mkdirSync(saveDirectory, { recursive: true });
 }
@@ -67,15 +60,42 @@ if (!fs.existsSync(saveDirectory)) {
 const sleep = (ms = 2000) => new Promise((r) => setTimeout(r, ms));
 
 async function welcome() {
-  const msg = "Welcome to the Scraper";
+  const msg = "Scrapy is working...";
+  const scrapy = `
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⡀⠀⠀⠀⢀⡄⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡞⠀⠀⠀⠀⢀⡤⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣆⡀⠀⠀⠸⡄⠀⢀⣾⡇⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⢠⡀⠀⠀⠀⠀⠀⣼⠁⠀⠀⣠⣾⡟⠁⠀⢀⣀⣤⣤⣤⣤⣶⣶⣶⣶⣦⣤⣤⣀⡀⠀⠙⣿⣦⡀⠀⣷⢠⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠻⣶⣄⠀⠀⢠⣿⠀⢠⣾⣿⣟⣤⣶⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣦⣼⣿⣿⣶⣿⣿⣿⣿⡇⠀⠀⠀⣀⣤⠆⠀⠀
+⠀⠀⠀⠀⠀⠀⠻⣿⣦⣄⢸⣿⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣇⣠⣤⣶⠟⠉⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⣀⣘⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠁⠀⠀⠀⠀⠀
+⠠⠤⠶⠶⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣶⣶⠶⠶⠒⠂
+⠀⠀⠀⠀⠀⣀⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⣄⠀⠀⠀⠀
+⠀⠀⢀⣴⣾⠿⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⠋⠈⠀⠀⠀⠙⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠿⣿⣶⣄⠀
+⣠⠾⠛⠉⠀⢠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠛⠁⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣦⣄⡀⠀⠀
+⠀⠀⠀⠀⢠⣿⠏⢸⣿⣿⣿⣿⣿⣿⣿⣿⠟⢻⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠀⠙⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣏⠉⠙⠛⠓⠆
+⠀⠀⠀⢀⡿⠁⠀⡼⢻⣿⣿⣿⣿⣿⠟⠁⠀⠘⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠏⠀⠀⠀⠈⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣇⠹⣿⡄⠀⠀⠀⠀
+⠀⠀⠀⠈⠁⠀⠐⠁⠀⣿⣿⣿⠟⣿⠀⠀⠀⠀⠙⠳⣀⠀⠀⡀⢀⠀⠀⠀⢠⠋⠀⠀⠀⠀⠀⣸⠁⠙⢿⣿⣿⣿⣿⣿⣿⣿⣿⡷⠮⢷⡀⠀⠀⠀
+⠀⠀⠀⠀⢠⡠⠤⠖⢻⣿⣿⡇⠠⣿⣀⣀⣀⣀⣀⣀⣀⣀⠀⠸⠸⠄⠀⠀⣠⣀⣀⣠⣀⡀⠰⠧⠤⠤⠬⣿⣿⣿⣿⣿⣿⣿⣷⣷⠦⠴⠒⠊⠀⠀
+⠀⠀⠀⠀⠈⠁⠀⠀⢸⡏⢻⡇⠀⠉⠉⠙⠿⠋⠉⠉⠛⠋⠀⠀⠀⠀⠀⠀⠉⠉⠙⠿⠋⠁⠀⠀⠀⠀⠀⢹⣿⣿⣻⣿⠿⣿⡿⢯⣦⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⢸⡇⣼⠀⢰⣧⣀⠀⠀⠀⠀⢀⣀⡆⠀⠀⠀⠀⠀⠀⢠⣄⣀⠀⠀⠀⠀⢀⣠⡴⡅⢸⠇⠏⠁⠀⠀⠀⠹⡎⢿⠄⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠃⣷⠀⠀⠉⠚⠿⠛⠿⠿⠛⠉⣠⡴⣶⣦⣤⣄⠀⠀⠛⠟⠛⣭⣉⠛⠿⠛⠊⠀⠁⠀⠀⠀⠀⠀⠀⢀⡇⢩⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢻⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠁⠀⠀⠈⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡠⠊⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠻⣦⡀⠀⠀⠀⠐⠒⠂⠠⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⢟⣛⠋⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠠⣤⣬⣿⣷⣤⣄⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣤⣤⣤⣤⣦⣶⣶⡚⣩⣴⢿⢿⢳⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣻⣵⣫⣿⣿⣿⣧⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣼⣿⡻⠻⠛⣫⡻⣿⣿⣿⣿⣿⡿⣿⢿⣿⣿⣿⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⢣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠛⠷⣮⣮⣾⣷⣿⣿⣿⣿⣿⣿⣿⣧⣿⣷⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠐⠋⠻⢿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠿⠿⠿⠿⠿⠿⠛⠛⠛⠋⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠉⠉⠉⠉⠉⠉⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+  `;
   figlet(msg, (err, data) => {
     if (err) console.error(err);
     console.log(gradient.pastel.multiline(data));
+    console.log(gradient.pastel.multiline(scrapy));
   });
   await sleep();
 }
 
-// Function to find the Chrome browser on the system
 const findBrowser = async () => {
   const candidates = [
     "C:/Program Files/Google/Chrome/Application/chrome.exe",
@@ -95,69 +115,78 @@ const findBrowser = async () => {
   return "google-chrome";
 };
 
-// Function to write jobs to an Excel file with retry logic
 const writeJobsToExcel = async (jobs, filePath) => {
   const tempFilePath = `${filePath}.tmp`;
+  const workbook = new ExcelJS.Workbook();
+  let worksheet;
 
   try {
-    let wb;
-    let ws;
-
     if (fs.existsSync(filePath)) {
-      wb = xlsx.readFile(filePath);
-      ws = wb.Sheets["Jobs"];
+      await workbook.xlsx.readFile(filePath);
+      worksheet = workbook.getWorksheet("Jobs");
 
-      if (ws) {
-        const existingJobs = xlsx.utils.sheet_to_json(ws);
-        const allJobs = [...existingJobs, ...jobs];
-        ws = xlsx.utils.json_to_sheet(allJobs);
-        wb.Sheets["Jobs"] = ws;
+      if (worksheet) {
+        // Append new jobs to the existing worksheet
+        jobs.forEach((job) => {
+          const rowValues = Object.values(job);
+          worksheet.addRow(rowValues);
+        });
       } else {
-        ws = xlsx.utils.json_to_sheet(jobs);
-        xlsx.utils.book_append_sheet(wb, ws, "Jobs");
+        worksheet = workbook.addWorksheet("Jobs");
+        worksheet.addRows(jobs);
       }
     } else {
-      wb = xlsx.utils.book_new();
-      ws = xlsx.utils.json_to_sheet(jobs);
-      xlsx.utils.book_append_sheet(wb, ws, "Jobs");
+      worksheet = workbook.addWorksheet("Jobs");
+      worksheet.addRows(jobs);
     }
 
-    // Write to the temporary file
-    xlsx.writeFile(wb, tempFilePath, { bookType: "xlsx" });
+    await workbook.xlsx.writeFile(tempFilePath);
 
-    // Rename the temporary file to the final file name
     await retryRename(tempFilePath, filePath);
   } catch (error) {
     console.error(chalk.red("Error saving Excel file:"), error);
   }
 };
 
-// Helper function for renaming with retry logic
-const retryRename = async (oldPath, newPath, retries = 5) => {
-  for (let i = 0; i < retries; i++) {
-    try {
-      await fs.promises.rename(oldPath, newPath);
-      return;
-    } catch (error) {
-      if (i < retries - 1) {
-        console.log(
-          chalk.yellow(`Retrying rename operation (${i + 1}/${retries})...`)
-        );
-        await sleep(1000); // Wait before retrying
-      } else {
-        throw error;
-      }
-    }
+const retryRename = async (tempFilePath, filePath) => {
+  try {
+    fs.renameSync(tempFilePath, filePath);
+  } catch (error) {
+    console.error(chalk.red("Error renaming file:"), error);
+    setTimeout(() => retryRename(tempFilePath, filePath), 1000);
   }
 };
 
-// Function to scrape jobs for a specific role
+const autoScroll = async (page) => {
+  await page.evaluate(async () => {
+    const distance = 100;
+    const delay = 100;
+    while (
+      document.documentElement.scrollTop + window.innerHeight <
+      document.documentElement.scrollHeight
+    ) {
+      document.documentElement.scrollTop += distance;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  });
+};
+
+const scrapeAllJobs = async () => {
+  await welcome();
+
+  const limit = pLimit(roles.length);
+  const rolePromises = roles.map((role) =>
+    limit(() => scrapeJobsForRole(role, timeLimit))
+  );
+
+  await Promise.all(rolePromises);
+};
+
 const scrapeJobsForRole = async (role, timeout) => {
   const executablePath = await findBrowser();
   let browser;
   let page;
 
-  // Retry logic for launching the browser and performing scraping
   const maxRetries = 3;
   let attempt = 0;
   let success = false;
@@ -194,12 +223,11 @@ const scrapeJobsForRole = async (role, timeout) => {
 
       while (hasNextPage) {
         if (Date.now() - startTime > timeout) {
-          chalkanimation.rainbow("Stopping scraping due to time limit.\n");
+          chalkanimation.rainbow("Scrapy stopping due to time limit.\n");
           await sleep();
           console.log(
-            `Excel file/files saved in ${chalk.bgBlue(` ${saveDirectory}`)}`
+            `Scrapy saved excel file in: ${chalk.bgBlue(` ${saveDirectory}`)}`
           );
-
           process.exit(1);
         }
 
@@ -228,102 +256,99 @@ const scrapeJobsForRole = async (role, timeout) => {
             timeout: 20000,
           });
 
+          const experienceArg = parseInt(argv.experience, 10) || 3;
+
+          const locationArg = argv.location.toLowerCase().trim();
+
           const jobs = await page.evaluate(() => {
             const jobElements = Array.from(
               document.querySelectorAll(".srp-jobtuple-wrapper")
             );
             return jobElements.map((el) => {
               const title = el.querySelector("a.title")?.innerText || "";
-              const company =
-                el.querySelector("a.companyName")?.innerText || "";
-              const location =
-                el.querySelector("a.jobLocation")?.innerText || "";
-              const experience =
-                el.querySelector(".exp-wrap")?.innerText.trim() ||
-                "No experience";
+              const company = el.querySelector("a.comp-name")?.innerText || "";
+              const location = el.querySelector(".loc-wrap")?.innerText || "";
+              const experienceElement = el.querySelector(".exp-wrap");
+              const experience = experienceElement
+                ? experienceElement.innerText.trim()
+                : "No experience";
               const link = el.querySelector("a.title")?.href || "";
               return { title, company, experience, location, link };
             });
           });
 
-          if (jobs.length === 0) {
-            hasNextPage = false;
-          } else {
-            allJobs = [...allJobs, ...jobs];
-            console.log(
-              chalk.green(
-                `Scraped ${jobs.length} jobs from page ${currentPageNumber}`
-              )
-            );
-            const nextButtonSelector =
-              'div[class="styles_pagination-cont__sWhS6"] > div > a:nth-of-type(2)';
-            const nextButton = await page.$(nextButtonSelector);
-            if (nextButton) {
-              await Promise.all([
-                page.waitForNavigation({ waitUntil: "domcontentloaded" }),
-                nextButton.click(),
-              ]);
-              currentPageNumber++;
-              await sleep(3000); // Wait before next navigation
-            } else {
-              hasNextPage = false;
+          const filteredJobs = jobs.filter((job) => {
+            const experience = job.experience
+              ? job.experience.trim().toLowerCase()
+              : "no experience";
+            let minExperience = 0;
+            let maxExperience = Infinity; // Default to Infinity if max value is not provided
+
+            if (experience.includes("-")) {
+              const parts = experience.split("-");
+              minExperience = parseInt(parts[0], 10);
+              maxExperience = parseInt(parts[1], 10);
+            } else if (experience.includes("year")) {
+              minExperience = maxExperience = parseInt(experience, 10);
             }
+
+            const includesDesiredExperience =
+              minExperience <= experienceArg && experienceArg <= maxExperience;
+
+            // Location filtering
+            const jobLocation = job.location.toLowerCase();
+
+            return (
+              includesDesiredExperience && jobLocation.includes(locationArg) // Ensure case-insensitive comparison
+            );
+          });
+
+          allJobs = [...allJobs, ...filteredJobs];
+          await writeJobsToExcel(allJobs, filePath);
+          console.log(
+            chalk.green(
+              `Scrapy found ${filteredJobs.length}! jobs from page ${currentPageNumber}`
+            )
+          );
+          const nextButtonSelector =
+            'div[class="styles_pagination-cont__sWhS6"] > div > a:nth-of-type(2)';
+          const nextButton = await page.$(nextButtonSelector);
+          if (nextButton) {
+            await Promise.all([
+              page.waitForNavigation({ waitUntil: "domcontentloaded" }),
+              nextButton.click(),
+            ]);
+            currentPageNumber++;
+            await sleep(3000);
+          } else {
+            hasNextPage = false;
           }
         } catch (error) {
-          console.error(chalk.red("Error scraping page:"), error);
+          console.error(chalk.red("Error Scrapy page:"), error);
           hasNextPage = false;
         }
       }
 
-      await writeJobsToExcel(allJobs, filePath);
       success = true;
-      console.log(chalk.bgGreen(`Scraping completed for role: ${role}`));
+      console.log(chalk.bgGreen(`Scrapy completed the role: ${role}`));
     } catch (error) {
-      console.error(chalk.red("Error in browser launch or scraping:"), error);
+      console.error(
+        chalk.red("Not Scrapy's mistake browser did not launch:"),
+        error
+      );
       attempt++;
       if (attempt >= maxRetries) {
-        console.error(chalk.red("Max retries reached. Exiting."));
+        console.error(chalk.red("Scrapy tried"));
       } else {
         console.log(
-          chalk.yellow(`Retrying browser launch (${attempt}/${maxRetries})...`)
+          chalk.yellow(
+            `Scrapy is trying to launch browser (${attempt}/${maxRetries})...`
+          )
         );
-        await sleep(5000); // Wait before retrying
-      }
-    } finally {
-      if (browser) {
-        await browser.close();
+        await sleep(5000);
       }
     }
   }
-};
-
-// Function to handle auto-scrolling on the page
-const autoScroll = async (page) => {
-  await page.evaluate(async () => {
-    const distance = 100;
-    const delay = 100;
-    while (
-      document.documentElement.scrollTop + window.innerHeight <
-      document.documentElement.scrollHeight
-    ) {
-      document.documentElement.scrollTop += distance;
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  });
-};
-
-// Main function to start scraping for all roles
-const scrapeAllJobs = async () => {
-  await welcome();
-
-  const limit = pLimit(roles.length);
-  const rolePromises = roles.map((role) =>
-    limit(() => scrapeJobsForRole(role, timeLimit))
-  );
-
-  await Promise.all(rolePromises);
-
-  console.log(chalk.bgBlue("All scraping tasks completed."));
 };
 
 scrapeAllJobs();
