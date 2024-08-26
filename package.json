@@ -1,18 +1,20 @@
 {
   "name": "scrapy-cli",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "index.js",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AnkitPaunikar/Scrapy"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node ."
   },
   "keywords": [],
-  "author": "",
+  "author": "Ankit Paunikar",
   "license": "ISC",
-  "description": "",
-  "bin": {
-    "scrapy-cli": "./index.js"
-  },
+  "description": "Scrapy the scraper",
+  "bin": "./index.js",
   "dependencies": {
     "chalk": "^5.3.0",
     "chalk-animation": "^2.0.3",
