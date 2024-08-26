@@ -13,9 +13,6 @@ import gradient from "gradient-string";
 import chalk from "chalk";
 import chalkanimation from "chalk-animation";
 import figlet from "figlet";
-import { exec as execCb } from "child_process";
-import { promisify } from "util";
-const exec = promisify(execCb);
 
 const argv = yargs(hideBin(process.argv))
   .option("location", {
@@ -354,63 +351,4 @@ const scrapeJobsForRole = async (role, timeout) => {
   }
 };
 
-const checkAndRunScrapyCLI = async () => {
-  try {
-    const { stdout } = await exec("npm list -g scrapy-cli");
-    if (stdout.includes("scrapy-cli")) {
-      await scrapeAllJobs();
-    } else {
-      throw new Error("Scrapy-CLI is not installed.");
-    }
-  } catch (error) {
-    const missing = "Scrapy Not There...!!";
-    const angry = `
-      
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿⣴⣤⣀⣴⣤⣹⣿⡷⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣴⣶⣷⣶⣾⠿⡛⠋⠸⠿⢿⣿⡟⣻⣷⣶⣦⣤⣄⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣴⡿⢋⣡⣴⣿⣿⠏⣴⡷⢨⣿⡞⢨⣿⡷⣿⣇⡀⣀⠉⡉⠛⠻⠿⣶⣦⣄⡀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣾⣿⣿⡟⣿⡿⣹⣿⠁⣽⣿⣇⢺⣿⣷⣉⣟⣻⠿⢷⣾⣴⣥⣂⡄⢉⠙⠻⢷⣦⡀⠀⠀
-⠀⠀⠀⠀⠀⠀ ⠀⠀⠀⠀⠀⠀⠀⠈⢿⣷⣿⣿⣿⡿⣷⢿⡯⢹⡟⠹⣯⣽⣿⠙⠛⠛⠻⠿⢿⣶⣬⣭⣛⣿⣷⣾⣦⣄⣙⣿⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣤⣾⠿⠛⠉⠀⠀⣠⣿⢇⣻⣧⠀⠀⠉⠛⠀⠀⠀⠀⠀⠀⠀⠉⠛⠻⢿⣿⣾⣽⣿⠿⠋⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣾⠿⠋⠀⠀⠀⠀⠀⠀⠈⣿⣿⡟⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠻⢷⣿⡄⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⡿⠛⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠛⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠿⣶⡀⠀
-⠀⠀⠀⠀⠀⠀⠀⢀⣴⣿⠏⠁⠀⠀⢀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡝⢿⣦
-⠀⠀⠀⠀⠀⠀⣰⣿⠟⠁⠀⠀⠀⢠⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣷⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⡆⠻
-⠀⠀⠀⠀⣀⣼⡿⠁⠀⠀⠀⠀⣰⡟⢿⡀⠀⠀⠀⠀⠀⠀⠀⠀⢰⡿⣧⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡷⠀⠀⠀⠀⢠⠀⠀⠀⠀⠀⠹⡄
-⠀⣴⣶⡿⠿⠋⠀⠀⠀⠀⢀⣼⠏⠀⠸⣧⠀⠀⠀⠀⠀⠀⠀⠀⣿⠃⠙⢷⣄⠀⠀⠀⠀⠀⠀⠀⠀⢛⠀⠀⠀⠀⣾⣃⠀⠀⠀⠀⠨⡑
-⠀⠻⣿⣦⣴⡾⠃⠀⠀⣠⣿⣃⠀⠀⠀⠹⣆⠀⠀⠀⠀⠀⠀⢸⡏⠀⠀⠈⢙⣦⣀⡤⠄⠒⠀⠀⠀⢌⠀⢠⣴⣾⣿⣏⡶⣤⡀⠀⠀⢣
-⠀⠀⠈⢻⣿⠁⠀⠀⣴⣿⡉⣙⠷⣶⣤⣤⣽⣇⠀⠀⠀⠀⠀⣿⡶⠶⢶⣻⣛⣻⡟⣦⡀⠀⠀⠀⠀⢎⡀⠀⠉⢿⣿⣿⣿⢃⠁⠀⠀⡡
-⠀⠀⢠⣿⠇⠀⢀⣾⣯⣿⣿⢿⣿⣿⢷⣬⠁⠹⣧⠀⠀⠀⢸⡏⢐⣾⠿⢿⣿⣿⢿⣿⣿⣦⣀⠀⠀⡞⡄⠀⠀⠀⢿⣿⡇⠰⠂⠀⠀⡔
-⠀⠀⣾⡟⠀⢠⣿⣿⣿⠋⢰⣾⣿⢿⣿⣧⠀⠀⠘⢷⣄⠀⣿⠁⠀⢀⣾⣿⠿⢿⣿⣮⡙⢿⣿⣷⣴⡸⡁⠀⠀⠀⠘⣿⠃⠀⠏⡀⠰⢠
-⠀⣼⡿⠁⠀⠸⣿⣿⣧⠀⢸⣿⣧⣬⣿⣿⠆⠀⠀⠀⠙⢷⡟⠀⠀⣼⣿⣯⣀⣸⣿⣿⣗⠈⢿⣿⣿⡿⣇⠀⠀⠀⠀⢹⠁⠀⢱⢀⠃⢆
-⣾⣿⠇⠀⠀⢸⣯⠉⠻⠷⠻⠿⠟⠻⠛⠋⠀⢀⠀⠀⠀⠀⠀⠀⠀⠈⠛⠻⠿⢿⣿⣿⣿⡀⢘⣿⣿⣿⣟⠀⠀⠀⠀⠀⠀⡀⠸⡄⡉⠆
-⣿⡟⠀⠀⠆⣿⡯⠠⡁⢆⡐⠠⠀⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠄⠠⠄⡀⠂⠄⡉⠍⡙⢋⠍⠡⣿⣏⠀⠀⠀⠀⠀⠀⡰⠈⣇⠘⡰
-⣿⠁⠀⠀⣸⣿⠁⢂⠁⠂⠄⠡⠈⠀⢠⣶⣦⣤⣶⣶⢦⣷⣾⢶⣄⠀⠀⠡⢀⠉⠰⢀⠎⢄⠡⡈⢅⢻⡇⠀⠀⠀⠀⠀⠀⡜⡀⢿⠠⣁
-⡿⠀⠀⢠⣿⡇⠀⢂⠈⠐⠈⡀⠈⠀⣿⡟⢭⡘⢤⠒⡢⢆⡹⠟⡿⣷⡀⠀⠀⡈⠀⠂⠈⢀⠂⠐⠈⣿⠇⠀⠀⠀⠀⠀⡰⠡⠄⢺⡐⠄
-⠇⠀⠀⠘⣿⣧⠂⠀⠀⠀⢀⠀⠀⢸⡿⣈⠦⡑⢎⡱⡑⢎⠴⡩⢔⡩⣷⡄⠀⠀⢀⠀⠠⠀⠀⠄⣸⡿⠀⠀⠀⠀⠀⢠⢁⡃⠆⢸⡅⢊
-⠀⠀⠀⠀⠹⣿⣆⠐⠀⠈⠀⠀⠀⢸⣿⢠⢣⡙⢦⠱⣉⢎⠲⡑⢎⠴⣹⣧⠀⠀⠀⠀⠀⠄⠀⢠⣿⠇⠀⠀⠀⠀⢠⠃⢢⡘⠄⢸⡆⡅
-⡇⠀⠀⠀⢰⡹⣿⣷⣄⠀⠀⠀⠀⠘⣿⢆⠣⡜⢢⠓⡌⢎⡱⣉⢎⠲⣹⢿⡄⠀⠀⠀⠀⠀⢠⣿⡟⠀⠀⠀⢀⠰⡁⠎⡔⠌⡄⢸⡇⠰
-⣿⡀⠀⠀⠀⢅⠢⡙⢿⣿⣶⣥⡀⢀⣹⣯⡓⣌⠣⣙⠸⢄⡃⠖⣌⠣⣌⣿⡇⡀⠀⠂⣠⣶⣿⡟⡀⠀⡀⠜⢢⠑⡌⠒⡌⡘⠀⡾⢄⢃
-`;
-    figlet(missing, (err, data) => {
-      if (err) {
-        console.error(err);
-      } else {
-        console.log(gradient.pastel.multiline(data));
-        console.log(gradient.pastel.multiline(angry));
-      }
-      exec("npm install -g scrapy-cli")
-        .then(() => {
-          return scrapeAllJobs();
-        })
-        .catch((installError) => {
-          console.error(
-            chalk.bgRed("Installation failed:"),
-            installError.message
-          );
-        });
-    });
-  }
-};
-
-await checkAndRunScrapyCLI();
+await scrapeAllJobs();
