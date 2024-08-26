@@ -1,5 +1,0 @@
---location: (required) The location where you want to find jobs.
---experience:(required) The number of years of experience you want the job to require.
---roles:(required) A space-separated list of job titles to search for.
---freshness: (Optional) Number of days to filter jobs by freshness. Default is 7 days.
---timeout: (Optional) Time limit for the script to run in minutes. Default is 320 minutes.

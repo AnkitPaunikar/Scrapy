@@ -14,7 +14,6 @@ import chalk from "chalk";
 import chalkanimation from "chalk-animation";
 import figlet from "figlet";
 import { exec } from "child_process";
-import chalkAnimation from "chalk-animation";
 
 const argv = yargs(hideBin(process.argv))
   .option("location", {
@@ -94,6 +93,7 @@ const installScrapyCLI = () => {
 ⡇⠀⠀⠀⢰⡹⣿⣷⣄⠀⠀⠀⠀⠘⣿⢆⠣⡜⢢⠓⡌⢎⡱⣉⢎⠲⣹⢿⡄⠀⠀⠀⠀⠀⢠⣿⡟⠀⠀⠀⢀⠰⡁⠎⡔⠌⡄⢸⡇⠰
 ⣿⡀⠀⠀⠀⢅⠢⡙⢿⣿⣶⣥⡀⢀⣹⣯⡓⣌⠣⣙⠸⢄⡃⠖⣌⠣⣌⣿⡇⡀⠀⠂⣠⣶⣿⡟⡀⠀⡀⠜⢢⠑⡌⠒⡌⡘⠀⡾⢄⢃
         `;
+
         figlet(missing, (err, data) => {
           if (err) console.error(err);
           console.log(gradient.pastel.multiline(data));
@@ -106,15 +106,19 @@ const installScrapyCLI = () => {
             if (installError) {
               reject(chalk.bgRed("Installation failed:")` ${installStderr}`);
             } else {
-              console.log(
-                chalkAnimation.rainbow("scrapy-cli installed successfully.")
-              );
+              const isHere = "Scrappy is Now Here...!!";
+
+              figlet(isHere, (err, data) => {
+                if (err) console.error(err);
+                console.log(gradient.pastel.multiline(isHere));
+              });
+
+              animation.start(); // Start the animation
               resolve();
             }
           }
         );
       } else {
-        console.log("scrapy-cli is already installed.");
         resolve();
       }
     });
