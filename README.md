@@ -2,8 +2,9 @@
 
 ### Overview
 
-Scrapy is a CLI tool designed for scraping job listings based on various filter parameters.
-
+Scrapy is a CLI tool designed for scraping job listings from (Naukri.com) based on various filter parameters.
+Future sites will be added in coming versions
+### Anyone interested in contributing to this project, Happy to take PR's
 ### Parameters of Filtering
 
 - **–location (required)**: Specify the location where you want to find jobs.
